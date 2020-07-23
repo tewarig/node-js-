@@ -6,26 +6,63 @@ mongoose
   .catch((err) => console.error("could not connect to mongodb", err));
 
 const courseSchema = new mongoose.Schema({
-  name: String,
+  name: { type: String, required: true, minlength: 3, maxlength: 50 },
   author: String,
-  tags: [String],
+  category: {
+    type: String,
+    required: true,
+    enum: ["mobile", "web", "network"],
+    lowercase: true,
+  },
+  tags: {
+    type: Array,
+    validate: {
+      isAsync: true,
+      validator: function (v, callback) {
+        setTimeout(() => {
+          const result = v && v.length > 0;
+          callback(result);
+        }, 1000);
+      },
+      message: "A couse should have atleast one tag.",
+    },
+  },
   date: { type: Date, default: Date.now },
   isPublished: Boolean,
+  price: {
+    type: Number,
+    min: 10,
+    max: 200,
+    get: (v) => Math.round(v),
+    set: (v) => Math.round(v),
+    required: function () {
+      return this.isPublished;
+    },
+    //you cannot use arrow function here... dude
+  },
 });
 
 const Course = mongoose.model("Course", courseSchema);
 //for more control over sting search use regular expression
 async function createCourse() {
   const course = new Course({
-    name: "Angular COurse",
-    author: "Someone",
-    tags: ["Angular", "FrontEnd"],
+    name: "Test COurse",
+    author: "Someone like me",
+    category: "-",
+    tags: ["coolooo"],
     isPublished: true,
+    price: 2,
   });
 
-  const result = await course.save();
-  console.log(result);
+  try {
+    // await course.validate();
+    const result = await course.save();
+    console.log(result);
+  } catch (ex) {
+    for (field in ex.errors) console.log(ex.errors[field].message);
+  }
 }
+createCourse();
 //comparision operators
 //eq(equal)
 //ne(not equal )
@@ -67,4 +104,21 @@ async function getCourses() {
   // .count();
   console.log(Courses);
 }
-getCourses();
+
+async function cool(id) {
+  const updateme = await Course.findByIdAndUpdate(id, {
+    $set: {
+      author: "Gaurav",
+      isPublished: false,
+    },
+  });
+  console.log(updateme);
+}
+
+async function DeleteOne(id) {
+  const delete12 = await Course.deleteOne({ _id: id });
+  console.log(delete12);
+
+  //or use deleteMany
+  //find by id and remove
+}
